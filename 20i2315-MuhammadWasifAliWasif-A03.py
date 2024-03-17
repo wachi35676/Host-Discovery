@@ -8,12 +8,20 @@ from scapy.layers.l2 import arping, Ether, ARP
 
 
 def proto2str(protocol):
+    """
+    Convert protocol number to protocol name
+    :param protocol:
+    :return:
+    """
     protocols = {1: 'icmp', 6: 'tcp', 17: 'udp'}
     return protocols.get(protocol, 'unknown')
 
 
 class HostDiscoveryTool(tk.Tk):
     def __init__(self):
+        """
+        Initialize the Host Discovery Tool
+        """
         super().__init__()
         self.title("Host Discovery Tool")
         self.geometry("600x400")
@@ -144,14 +152,32 @@ class HostDiscoveryTool(tk.Tk):
         self.mainloop()
 
     def arp_ping_scan(self):
+        """
+        This function performs an ARP Ping Scan. It retrieves the IP range from the GUI,
+        then starts a new thread to perform the scan.
+
+        :return: None
+        """
+        # Get the IP range from the GUI
         ip_range = self.arp_ip_range_entry.get()
+        # Clear the results text box in the GUI
         self.arp_results_text.delete("1.0", tk.END)
+        # Insert initial scanning message to the results text box in the GUI
         self.arp_results_text.insert(tk.END, "Scanning...\n")
 
         def scan_thread():
+            """
+            This function performs the ARP Ping Scan in a separate thread. It sends ARP packets to the specified IP range
+            and updates the results text box in the GUI with the results.
+
+            :return: None
+            """
+            # Send the ARP packet and collect the responses
             ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip_range), timeout=2, verbose=0)
+            # Update the results text box in the GUI with the results
             self.arp_results_text.insert(tk.END, "ARP Ping Scan Results:\n")
             self.arp_results_text.insert(tk.END, "Alive Hosts:\n")
+            # If responses were received, update the results text box in the GUI with the IP addresses and MAC addresses of the hosts
             for snd, rcv in ans:
                 response_time = rcv.time - snd.sent_time
                 ip_addr = rcv[ARP].psrc
@@ -159,16 +185,33 @@ class HostDiscoveryTool(tk.Tk):
                 self.arp_results_text.insert(tk.END,
                                              f"IP: {ip_addr} - MAC: {mac_addr} - Response Time: {response_time:.3f}s\n")
 
+        # Start the scan thread
         thread = threading.Thread(target=scan_thread)
         thread.start()
 
     def icmp_ping_scan(self):
+        """
+        This function performs an ICMP Ping Scan. It retrieves the IP range and ping type from the GUI,
+        then starts a new thread to perform the scan.
+
+        :return: None
+        """
+        # Get the IP range from the GUI
         ip_range = self.icmp_ip_range_entry.get()
+        # Get the ping type from the GUI and convert it to an integer
         ping_type = ["Echo Ping", "Echo Ping Sweep", "Timestamp Ping", "Address Mask Ping"].index(
             self.icmp_ping_type_var.get()) + 1
+        # Clear the results text box in the GUI
         self.icmp_results_text.delete("1.0", tk.END)
 
         def scan_thread():
+            """
+            This function performs the ICMP Ping Scan in a separate thread. It sends ICMP packets based on the ping type
+            and updates the results text box in the GUI with the results.
+
+            :return: None
+            """
+            # Create the ICMP packet to send based on the ping type
             if ping_type == 1:
                 ping = IP(dst=ip_range) / ICMP()
             elif ping_type == 2:
@@ -178,13 +221,16 @@ class HostDiscoveryTool(tk.Tk):
             elif ping_type == 4:
                 ping = IP(dst=ip_range) / ICMP(type=17)
 
+            # Send the ICMP packet and collect the responses
             answered, unanswered = sr(ping, timeout=2, verbose=0)
+            # Update the results text box in the GUI with the results
             self.icmp_results_text.insert(tk.END, f"\nFinished sending {len(unanswered) + len(answered)} packets.\n")
             if len(answered) > 0:
                 self.icmp_results_text.insert(tk.END, ".\\" * len(answered) + "\n")
             self.icmp_results_text.insert(tk.END,
                                           f"Received {len(answered) + len(unanswered)} packets, got {len(answered)} answers, remaining {len(unanswered)} packets\n")
             self.icmp_results_text.insert(tk.END, "Alive Hosts:\n")
+            # If responses were received, update the results text box in the GUI with the IP addresses of the hosts
             for req, res in answered:
                 response_time = res.time - req.sent_time
                 ip_addr = res.sprintf('%IP.src%')
@@ -192,42 +238,80 @@ class HostDiscoveryTool(tk.Tk):
                 icmp_code = res[ICMP].code
                 self.icmp_results_text.insert(tk.END, f"{ip_addr}\n")
 
+        # Start the scan thread
         thread = threading.Thread(target=scan_thread)
         thread.start()
 
     def udp_ping_scan(self):
+        """
+        This function performs a UDP Ping Scan. It retrieves the IP range and port from the GUI,
+        then starts a new thread to perform the scan.
+
+        :return: None
+        """
+        # Get the IP range from the GUI
         ip_range = self.udp_ip_range_entry.get()
+        # Get the port from the GUI and convert it to an integer
         port = int(self.udp_port_entry.get())
+        # Clear the results text box in the GUI
         self.udp_results_text.delete("1.0", tk.END)
 
         def scan_thread():
+            """
+            This function performs the UDP Ping Scan in a separate thread. It sends UDP packets to the specified port
+            and updates the results text box in the GUI with the results.
+
+            :return: None
+            """
+            # Create the UDP packet to send
             ping = IP(dst=ip_range) / UDP(dport=port)
+            # Send the UDP packet and collect the responses
             answered, unanswered = sr(ping, timeout=2, verbose=0)
+            # Update the results text box in the GUI with the results
             self.udp_results_text.insert(tk.END, f"\nFinished sending {len(unanswered) + len(answered)} packets.\n")
             if len(answered) > 0:
                 self.udp_results_text.insert(tk.END, ".\\" * len(answered) + "\n")
             self.udp_results_text.insert(tk.END,
                                          f"Received {len(answered) + len(unanswered)} packets, got {len(answered)} answers, remaining {len(unanswered)} packets\n")
 
+            # If no responses were received, update the results text box in the GUI
             if len(answered) == 0:
                 self.udp_results_text.insert(tk.END, "No responses received for UDP Ping Scan.\n")
             else:
+                # If responses were received, update the results text box in the GUI with the IP addresses of the hosts
                 self.udp_results_text.insert(tk.END, "Alive Hosts:\n")
                 for req, res in answered:
                     response_time = res.time - req.sent_time
                     ip_addr = res.sprintf('%IP.src%')
                     self.udp_results_text.insert(tk.END, f"IP: {ip_addr} - Response Time: {response_time:.3f}s\n")
 
+        # Start the scan thread
         thread = threading.Thread(target=scan_thread)
         thread.start()
 
     def tcp_ping_scan(self):
+        """
+        This function performs a TCP Ping Scan. It retrieves the IP range and scan type from the GUI,
+        then starts a new thread to perform the scan.
+
+        :return: None
+        """
+        # Get the IP range from the GUI
         ip_range = self.tcp_ip_range_entry.get()
+        # Get the scan type from the GUI and convert it to an integer
         scan_type = ["SYN Scan", "ACK Scan", "Null Scan", "XMAS Scan", "FIN Scan"].index(
             self.tcp_scan_type_var.get()) + 1
+        # Clear the results text box in the GUI
         self.tcp_results_text.delete("1.0", tk.END)
 
         def scan_thread():
+            """
+            This function performs the TCP Ping Scan in a separate thread. It sends TCP packets with different flags
+            based on the scan type and updates the results text box in the GUI with the results.
+
+            :return: None
+            """
+            # Create the TCP packet to send based on the scan type
             if scan_type == 1:
                 ping = IP(dst=ip_range) / TCP(flags="S")
             elif scan_type == 2:
@@ -239,16 +323,20 @@ class HostDiscoveryTool(tk.Tk):
             elif scan_type == 5:
                 ping = IP(dst=ip_range) / TCP(flags="F")
 
+            # Send the TCP packet and collect the responses
             answered, unanswered = sr(ping, timeout=2, verbose=0)
+            # Update the results text box in the GUI with the results
             self.tcp_results_text.insert(tk.END, f"\nFinished sending {len(unanswered) + len(answered)} packets.\n")
             if len(answered) > 0:
                 self.tcp_results_text.insert(tk.END, ".\\" * len(answered) + "\n")
             self.tcp_results_text.insert(tk.END,
                                          f"Received {len(answered) + len(unanswered)} packets, got {len(answered)} answers, remaining {len(unanswered)} packets\n")
 
+            # If no responses were received, update the results text box in the GUI
             if len(answered) == 0:
                 self.tcp_results_text.insert(tk.END, "No responses received for TCP Ping Scan.\n")
             else:
+                # If responses were received, update the results text box in the GUI with the IP addresses of the hosts
                 self.tcp_results_text.insert(tk.END, "Alive Hosts:\n")
                 for req, res in answered:
                     response_time = res.time - req.sent_time
@@ -257,18 +345,38 @@ class HostDiscoveryTool(tk.Tk):
                     self.tcp_results_text.insert(tk.END,
                                                  f"IP: {ip_addr} - TCP Flags: {tcp_flags} - Response Time: {response_time:.3f}s\n")
 
+        # Start the scan thread
         thread = threading.Thread(target=scan_thread)
         thread.start()
 
     def ip_protocol_ping_scan(self):
+        """
+        This function performs an IP Protocol Ping Scan. It retrieves the IP range and protocols from the GUI,
+        then starts a new thread to perform the scan.
+
+        :return: None
+        """
+        # Get the IP range from the GUI
         ip_range = self.ip_ip_range_entry.get()
+        # Get the protocols from the GUI and convert them to integers
         protocols = [int(p) for p in self.ip_protocols_var.get().split()]
+        # Clear the results text box in the GUI
         self.ip_results_text.delete("1.0", tk.END)
 
         def scan_thread():
+            """
+            This function performs the IP Protocol Ping Scan in a separate thread. It sends packets for each protocol
+            and updates the results text box in the GUI with the results.
+
+            :return: None
+            """
+            # Loop over each protocol
             for protocol in protocols:
+                # Create the packet to send
                 ping = IP(dst=ip_range, proto=protocol)
+                # Send the packet and collect the responses
                 answered, unanswered = sr(ping, timeout=2, verbose=0)
+                # Update the results text box in the GUI with the results
                 self.ip_results_text.insert(tk.END,
                                             f"\nFinished sending {len(unanswered) + len(answered)} packets for protocol {proto2str(protocol)}.\n")
                 if len(answered) > 0:
@@ -276,14 +384,17 @@ class HostDiscoveryTool(tk.Tk):
                 self.ip_results_text.insert(tk.END,
                                             f"Received {len(answered) + len(unanswered)} packets, got {len(answered)} answers, remaining {len(unanswered)} packets\n")
 
+                # If no responses were received, update the results text box in the GUI
                 if len(answered) == 0:
                     self.ip_results_text.insert(tk.END, f"No responses received for protocol {proto2str(protocol)}.\n")
                 else:
+                    # If responses were received, update the results text box in the GUI with the IP addresses of the hosts
                     self.ip_results_text.insert(tk.END, f"Alive Hosts for protocol {proto2str(protocol)}:\n")
                     for req, res in answered:
                         ip_addr = res.sprintf('%IP.src%')
                         self.ip_results_text.insert(tk.END, f"{ip_addr}\n")
 
+        # Start the scan thread
         thread = threading.Thread(target=scan_thread)
         thread.start()
 
