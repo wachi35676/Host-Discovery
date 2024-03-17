@@ -17,6 +17,7 @@ class HostDiscoveryTool(tk.Tk):
         super().__init__()
         self.title("Host Discovery Tool")
         self.geometry("600x400")
+        self.iconbitmap("icon.ico")
 
         # Create tabs
         self.tab_control = ttk.Notebook(self)
@@ -92,7 +93,7 @@ class HostDiscoveryTool(tk.Tk):
         self.icmp_scan_button = ttk.Button(self.icmp_tab, text="Scan", command=self.icmp_ping_scan)
         self.icmp_scan_button.grid(row=0, column=4, padx=10, pady=10)
         self.icmp_results_text = scrolledtext.ScrolledText(self.icmp_tab, width=60, height=20)
-        self.icmp_results_text.grid(row=1, column=0, columnspan=5, padx=10, pady=10)
+        self.icmp_results_text.grid(row=1, column=0, columnspan=5, padx=10, pady=10, sticky="nsew")
 
         # UDP Ping Scan tab
         self.udp_ip_range_label = ttk.Label(self.udp_tab, text="IP Range:")
@@ -106,7 +107,7 @@ class HostDiscoveryTool(tk.Tk):
         self.udp_scan_button = ttk.Button(self.udp_tab, text="Scan", command=self.udp_ping_scan)
         self.udp_scan_button.grid(row=0, column=4, padx=10, pady=10)
         self.udp_results_text = scrolledtext.ScrolledText(self.udp_tab, width=60, height=20)
-        self.udp_results_text.grid(row=1, column=0, columnspan=5, padx=10, pady=10)
+        self.udp_results_text.grid(row=1, column=0, columnspan=5, padx=10, pady=10, sticky="nsew")
 
         # TCP Ping Scan tab
         self.tcp_ip_range_label = ttk.Label(self.tcp_tab, text="IP Range:")
@@ -122,7 +123,7 @@ class HostDiscoveryTool(tk.Tk):
         self.tcp_scan_button = ttk.Button(self.tcp_tab, text="Scan", command=self.tcp_ping_scan)
         self.tcp_scan_button.grid(row=0, column=4, padx=10, pady=10)
         self.tcp_results_text = scrolledtext.ScrolledText(self.tcp_tab, width=60, height=20)
-        self.tcp_results_text.grid(row=1, column=0, columnspan=5, padx=10, pady=10)
+        self.tcp_results_text.grid(row=1, column=0, columnspan=5, padx=10, pady=10, sticky="nsew")
 
         # IP Protocol Ping Scan tab
         self.ip_ip_range_label = ttk.Label(self.ip_tab, text="IP Range:")
@@ -137,7 +138,7 @@ class HostDiscoveryTool(tk.Tk):
         self.ip_scan_button = ttk.Button(self.ip_tab, text="Scan", command=self.ip_protocol_ping_scan)
         self.ip_scan_button.grid(row=0, column=4, padx=10, pady=10)
         self.ip_results_text = scrolledtext.ScrolledText(self.ip_tab, width=60, height=20)
-        self.ip_results_text.grid(row=1, column=0, columnspan=5, padx=10, pady=10)
+        self.ip_results_text.grid(row=1, column=0, columnspan=5, padx=10, pady=10, sticky="nsew")
 
         # Run the main loop
         self.mainloop()
