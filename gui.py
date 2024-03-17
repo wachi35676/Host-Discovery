@@ -4,7 +4,7 @@ from scapy.all import *
 import threading
 
 from scapy.layers.inet import ICMP, TCP, IP, UDP
-from scapy.layers.l2 import arping
+from scapy.layers.l2 import arping, Ether, ARP
 
 
 def proto2str(protocol):
@@ -114,11 +114,15 @@ class HostDiscoveryTool(tk.Tk):
         self.arp_results_text.insert(tk.END, "Scanning...\n")
 
         def scan_thread():
-            answered, unanswered = arping(ip_range, verbose=0)
+            ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip_range), timeout=2, verbose=0)
             self.arp_results_text.insert(tk.END, "ARP Ping Scan Results:\n")
             self.arp_results_text.insert(tk.END, "Alive Hosts:\n")
-            for res in answered:
-                self.arp_results_text.insert(tk.END, f"{res[0].pdst} ({res[0].hwdst})\n")
+            for snd, rcv in ans:
+                response_time = rcv.time - snd.sent_time
+                ip_addr = rcv[ARP].psrc
+                mac_addr = rcv[Ether].src
+                self.arp_results_text.insert(tk.END,
+                                             f"IP: {ip_addr} - MAC: {mac_addr} - Response Time: {response_time:.3f}s\n")
 
         thread = threading.Thread(target=scan_thread)
         thread.start()
@@ -128,7 +132,6 @@ class HostDiscoveryTool(tk.Tk):
         ping_type = ["Echo Ping", "Echo Ping Sweep", "Timestamp Ping", "Address Mask Ping"].index(
             self.icmp_ping_type_var.get()) + 1
         self.icmp_results_text.delete("1.0", tk.END)
-        self.icmp_results_text.insert(tk.END, "Scanning...\n")
 
         def scan_thread():
             if ping_type == 1:
@@ -141,11 +144,18 @@ class HostDiscoveryTool(tk.Tk):
                 ping = IP(dst=ip_range) / ICMP(type=17)
 
             answered, unanswered = sr(ping, timeout=2, verbose=0)
+            self.icmp_results_text.insert(tk.END, f"\nFinished sending {len(unanswered) + len(answered)} packets.\n")
+            if len(answered) > 0:
+                self.icmp_results_text.insert(tk.END, ".\\" * len(answered) + "\n")
             self.icmp_results_text.insert(tk.END,
-                                          f"ICMP {['Echo Ping', 'Echo Ping Sweep', 'Timestamp Ping', 'Address Mask Ping'][ping_type - 1]} Results:\n")
+                                          f"Received {len(answered) + len(unanswered)} packets, got {len(answered)} answers, remaining {len(unanswered)} packets\n")
             self.icmp_results_text.insert(tk.END, "Alive Hosts:\n")
             for req, res in answered:
-                self.icmp_results_text.insert(tk.END, f"{res.sprintf('%IP.src%')}\n")
+                response_time = res.time - req.sent_time
+                ip_addr = res.sprintf('%IP.src%')
+                icmp_type = res[ICMP].type
+                icmp_code = res[ICMP].code
+                self.icmp_results_text.insert(tk.END, f"{ip_addr}\n")
 
         thread = threading.Thread(target=scan_thread)
         thread.start()
@@ -154,15 +164,24 @@ class HostDiscoveryTool(tk.Tk):
         ip_range = self.udp_ip_range_entry.get()
         port = int(self.udp_port_entry.get())
         self.udp_results_text.delete("1.0", tk.END)
-        self.udp_results_text.insert(tk.END, "Scanning...\n")
 
         def scan_thread():
             ping = IP(dst=ip_range) / UDP(dport=port)
             answered, unanswered = sr(ping, timeout=2, verbose=0)
-            self.udp_results_text.insert(tk.END, f"UDP Ping Scan (Port {port}) Results:\n")
-            self.udp_results_text.insert(tk.END, "Alive Hosts:\n")
-            for req, res in answered:
-                self.udp_results_text.insert(tk.END, f"{res.sprintf('%IP.src%')}\n")
+            self.udp_results_text.insert(tk.END, f"\nFinished sending {len(unanswered) + len(answered)} packets.\n")
+            if len(answered) > 0:
+                self.udp_results_text.insert(tk.END, ".\\" * len(answered) + "\n")
+            self.udp_results_text.insert(tk.END,
+                                         f"Received {len(answered) + len(unanswered)} packets, got {len(answered)} answers, remaining {len(unanswered)} packets\n")
+
+            if len(answered) == 0:
+                self.udp_results_text.insert(tk.END, "No responses received for UDP Ping Scan.\n")
+            else:
+                self.udp_results_text.insert(tk.END, "Alive Hosts:\n")
+                for req, res in answered:
+                    response_time = res.time - req.sent_time
+                    ip_addr = res.sprintf('%IP.src%')
+                    self.udp_results_text.insert(tk.END, f"IP: {ip_addr} - Response Time: {response_time:.3f}s\n")
 
         thread = threading.Thread(target=scan_thread)
         thread.start()
@@ -172,7 +191,6 @@ class HostDiscoveryTool(tk.Tk):
         scan_type = ["SYN Scan", "ACK Scan", "Null Scan", "XMAS Scan", "FIN Scan"].index(
             self.tcp_scan_type_var.get()) + 1
         self.tcp_results_text.delete("1.0", tk.END)
-        self.tcp_results_text.insert(tk.END, "Scanning...\n")
 
         def scan_thread():
             if scan_type == 1:
@@ -187,11 +205,22 @@ class HostDiscoveryTool(tk.Tk):
                 ping = IP(dst=ip_range) / TCP(flags="F")
 
             answered, unanswered = sr(ping, timeout=2, verbose=0)
+            self.tcp_results_text.insert(tk.END, f"\nFinished sending {len(unanswered) + len(answered)} packets.\n")
+            if len(answered) > 0:
+                self.tcp_results_text.insert(tk.END, ".\\" * len(answered) + "\n")
             self.tcp_results_text.insert(tk.END,
-                                         f"TCP {['SYN', 'ACK', 'Null', 'XMAS', 'FIN'][scan_type - 1]} Scan Results:\n")
-            self.tcp_results_text.insert(tk.END, "Alive Hosts:\n")
-            for req, res in answered:
-                self.tcp_results_text.insert(tk.END, f"{res.sprintf('%IP.src%')}\n")
+                                         f"Received {len(answered) + len(unanswered)} packets, got {len(answered)} answers, remaining {len(unanswered)} packets\n")
+
+            if len(answered) == 0:
+                self.tcp_results_text.insert(tk.END, "No responses received for TCP Ping Scan.\n")
+            else:
+                self.tcp_results_text.insert(tk.END, "Alive Hosts:\n")
+                for req, res in answered:
+                    response_time = res.time - req.sent_time
+                    ip_addr = res.sprintf('%IP.src%')
+                    tcp_flags = res[TCP].flags
+                    self.tcp_results_text.insert(tk.END,
+                                                 f"IP: {ip_addr} - TCP Flags: {tcp_flags} - Response Time: {response_time:.3f}s\n")
 
         thread = threading.Thread(target=scan_thread)
         thread.start()
@@ -200,16 +229,25 @@ class HostDiscoveryTool(tk.Tk):
         ip_range = self.ip_ip_range_entry.get()
         protocols = [int(p) for p in self.ip_protocols_var.get().split()]
         self.ip_results_text.delete("1.0", tk.END)
-        self.ip_results_text.insert(tk.END, "Scanning...\n")
 
         def scan_thread():
             for protocol in protocols:
                 ping = IP(dst=ip_range, proto=protocol)
                 answered, unanswered = sr(ping, timeout=2, verbose=0)
-                self.ip_results_text.insert(tk.END, f"IP Protocol {proto2str(protocol)} Ping Scan Results:\n")
-                self.ip_results_text.insert(tk.END, "Alive Hosts:\n")
-                for req, res in answered:
-                    self.ip_results_text.insert(tk.END, f"{res.sprintf('%IP.src%')}\n")
+                self.ip_results_text.insert(tk.END,
+                                            f"\nFinished sending {len(unanswered) + len(answered)} packets for protocol {proto2str(protocol)}.\n")
+                if len(answered) > 0:
+                    self.ip_results_text.insert(tk.END, ".\\" * len(answered) + "\n")
+                self.ip_results_text.insert(tk.END,
+                                            f"Received {len(answered) + len(unanswered)} packets, got {len(answered)} answers, remaining {len(unanswered)} packets\n")
+
+                if len(answered) == 0:
+                    self.ip_results_text.insert(tk.END, f"No responses received for protocol {proto2str(protocol)}.\n")
+                else:
+                    self.ip_results_text.insert(tk.END, f"Alive Hosts for protocol {proto2str(protocol)}:\n")
+                    for req, res in answered:
+                        ip_addr = res.sprintf('%IP.src%')
+                        self.ip_results_text.insert(tk.END, f"{ip_addr}\n")
 
         thread = threading.Thread(target=scan_thread)
         thread.start()
