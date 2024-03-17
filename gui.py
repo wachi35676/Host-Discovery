@@ -16,7 +16,7 @@ class HostDiscoveryTool(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Host Discovery Tool")
-        self.geometry("500x400")
+        self.geometry("600x400")
 
         # Create tabs
         self.tab_control = ttk.Notebook(self)
@@ -33,15 +33,49 @@ class HostDiscoveryTool(tk.Tk):
         self.tab_control.add(self.ip_tab, text="IP Protocol Ping Scan")
         self.tab_control.pack(expand=1, fill="both")
 
+        # Configure grid weights for each tab
+        self.arp_tab.rowconfigure(1, weight=1)
+        self.arp_tab.columnconfigure(0, weight=1)
+        self.arp_tab.columnconfigure(1, weight=1)
+        self.arp_tab.columnconfigure(2, weight=1)
+
+        self.icmp_tab.rowconfigure(1, weight=1)
+        self.icmp_tab.columnconfigure(0, weight=1)
+        self.icmp_tab.columnconfigure(1, weight=1)
+        self.icmp_tab.columnconfigure(2, weight=1)
+        self.icmp_tab.columnconfigure(3, weight=1)
+        self.icmp_tab.columnconfigure(4, weight=1)
+
+        self.udp_tab.rowconfigure(1, weight=1)
+        self.udp_tab.columnconfigure(0, weight=1)
+        self.udp_tab.columnconfigure(1, weight=1)
+        self.udp_tab.columnconfigure(2, weight=1)
+        self.udp_tab.columnconfigure(3, weight=1)
+        self.udp_tab.columnconfigure(4, weight=1)
+
+        self.tcp_tab.rowconfigure(1, weight=1)
+        self.tcp_tab.columnconfigure(0, weight=1)
+        self.tcp_tab.columnconfigure(1, weight=1)
+        self.tcp_tab.columnconfigure(2, weight=1)
+        self.tcp_tab.columnconfigure(3, weight=1)
+        self.tcp_tab.columnconfigure(4, weight=1)
+
+        self.ip_tab.rowconfigure(1, weight=1)
+        self.ip_tab.columnconfigure(0, weight=1)
+        self.ip_tab.columnconfigure(1, weight=1)
+        self.ip_tab.columnconfigure(2, weight=1)
+        self.ip_tab.columnconfigure(3, weight=1)
+        self.ip_tab.columnconfigure(4, weight=1)
+
         # ARP Ping Scan tab
         self.arp_ip_range_label = ttk.Label(self.arp_tab, text="IP Range:")
         self.arp_ip_range_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
         self.arp_ip_range_entry = ttk.Entry(self.arp_tab)
-        self.arp_ip_range_entry.grid(row=0, column=1, padx=10, pady=10)
+        self.arp_ip_range_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
         self.arp_scan_button = ttk.Button(self.arp_tab, text="Scan", command=self.arp_ping_scan)
-        self.arp_scan_button.grid(row=0, column=2, padx=10, pady=10)
+        self.arp_scan_button.grid(row=0, column=2, padx=10, pady=10, sticky="ew")
         self.arp_results_text = scrolledtext.ScrolledText(self.arp_tab, width=60, height=20)
-        self.arp_results_text.grid(row=1, column=0, columnspan=3, padx=10, pady=10)
+        self.arp_results_text.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
 
         # ICMP Ping Scan tab
         self.icmp_ip_range_label = ttk.Label(self.icmp_tab, text="IP Range:")
